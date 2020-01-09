@@ -324,6 +324,33 @@ void ili9341_set_orientation(uint8_t m) {
 	caps->ystart = 0;
 	caps->xstart = 0;
 
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA)
+	switch (orientation) {
+	  case LANDSCAPE:
+		madctl = (ST7735_MADCTL_ML | ST7735_MADCTL_BGR);
+		caps->width  = ILI9341_HEIGHT;
+		caps->height = ILI9341_WIDTH;
+		break;
+	  case PORTRAIT:
+		madctl = (ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_BGR);
+		caps->width  = ILI9341_WIDTH;
+		caps->height = ILI9341_HEIGHT;
+		break;
+	  case LANDSCAPE_FLIP:
+		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_BGR);
+		caps->width  = ILI9341_HEIGHT;
+		caps->height = ILI9341_WIDTH;
+		break;
+	  case PORTRAIT_FLIP:
+	  	madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MV | ST7735_MADCTL_BGR);
+		caps->width  = ILI9341_WIDTH;
+		caps->height = ILI9341_HEIGHT;
+		break;
+	}
+
+	gdisplay_ll_command(ST7735_MADCTL);
+	gdisplay_ll_data(&madctl, 1);
+#else
 	switch (orientation) {
 	  case LANDSCAPE:
 		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_RGB);
@@ -349,6 +376,7 @@ void ili9341_set_orientation(uint8_t m) {
 
 	gdisplay_ll_command(ILI9341_RDMADCTL);
 	gdisplay_ll_data(&madctl, 1);
+#endif
 }
 
 void ili9341_tp_set_cal(int calx, int caly) {
