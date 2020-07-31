@@ -34,6 +34,8 @@ FS_PARTITION := storage
 # Don't include this components
 FS_EXCLUDE_COMPONENTS := romfs_image
 
+$(info Board is $(BOARDN))
+
 # Set the root path
 ifeq ("foo$(FS_ROOT_PATH)", "foo")
   ifneq ("foo$(BOARDN)", "foo")

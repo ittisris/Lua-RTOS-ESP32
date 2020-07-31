@@ -93,12 +93,82 @@ static const st7735_variant_t variant[] = {
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" BLUE
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" GREEN
 	{128, 128, 2 ,  3, ST7735_MADCTL_RGB}, // 1.44" GREEN
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5stickC
+	{80, 160 , 26,  1, ST7735_MADCTL_RGB}  // 0.96" BLACK
+#else
 	{160, 80 , 24,  0, ST7735_MADCTL_RGB}  // 0.96" BLACK
+#endif
+
 };
 
 
 // Initialization commands for 7735B screens
 // -----------------------------------------
+//
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5stickC
+
+//TFT_INIT_DELAY = DELAY = 0x80
+#define TFT_INIT_DELAY 0x80
+
+static const uint8_t Bcmd[] = {
+	18,                       // 18 commands in list:
+	ST7735_SWRESET,   TFT_INIT_DELAY,  //  1: Software reset, no args, w/delay
+	  50,                     //     50 ms delay
+	ST7735_SLPOUT ,   TFT_INIT_DELAY,  //  2: Out of sleep mode, no args, w/delay
+	  255,                    //     255 = 500 ms delay
+	ST7735_COLMOD , 1+TFT_INIT_DELAY,  //  3: Set color mode, 1 arg + delay:
+	  0x05,                   //     16-bit color
+	  10,                     //     10 ms delay
+	ST7735_FRMCTR1, 3+TFT_INIT_DELAY,  //  4: Frame rate control, 3 args + delay:
+	  0x00,                   //     fastest refresh
+	  0x06,                   //     6 lines front porch
+	  0x03,                   //     3 lines back porch
+	  10,                     //     10 ms delay
+	ST7735_MADCTL , 1      ,  //  5: Memory access ctrl (directions), 1 arg:
+	  0x40,                   //     Row addr/col addr, bottom to top refresh
+	ST7735_DISSET5, 2      ,  //  6: Display settings #5, 2 args, no delay:
+	  0x15,                   //     1 clk cycle nonoverlap, 2 cycle gate
+							  //     rise, 3 cycle osc equalize
+	  0x02,                   //     Fix on VTL
+	ST7735_INVCTR , 1      ,  //  7: Display inversion control, 1 arg:
+	  0x0,                    //     Line inversion
+	ST7735_PWCTR1 , 2+TFT_INIT_DELAY,  //  8: Power control, 2 args + delay:
+	  0x02,                   //     GVDD = 4.7V
+	  0x70,                   //     1.0uA
+	  10,                     //     10 ms delay
+	ST7735_PWCTR2 , 1      ,  //  9: Power control, 1 arg, no delay:
+	  0x05,                   //     VGH = 14.7V, VGL = -7.35V
+	ST7735_PWCTR3 , 2      ,  // 10: Power control, 2 args, no delay:
+	  0x01,                   //     Opamp current small
+	  0x02,                   //     Boost frequency
+	ST7735_VMCTR1 , 2+TFT_INIT_DELAY,  // 11: Power control, 2 args + delay:
+	  0x3C,                   //     VCOMH = 4V
+	  0x38,                   //     VCOML = -1.1V
+	  10,                     //     10 ms delay
+	ST7735_PWCTR6 , 2      ,  // 12: Power control, 2 args, no delay:
+	  0x11, 0x15,
+	ST7735_GMCTRP1,16      ,  // 13: Magical unicorn dust, 16 args, no delay:
+	  0x09, 0x16, 0x09, 0x20, //     (seriously though, not sure what
+	  0x21, 0x1B, 0x13, 0x19, //      these config values represent)
+	  0x17, 0x15, 0x1E, 0x2B,
+	  0x04, 0x05, 0x02, 0x0E,
+	ST7735_GMCTRN1,16+TFT_INIT_DELAY,  // 14: Sparkles and rainbows, 16 args + delay:
+	  0x0B, 0x14, 0x08, 0x1E, //     (ditto)
+	  0x22, 0x1D, 0x18, 0x1E,
+	  0x1B, 0x1A, 0x24, 0x2B,
+	  0x06, 0x06, 0x02, 0x0F,
+	  10,                     //     10 ms delay
+	ST7735_CASET  , 4      ,  // 15: Column addr set, 4 args, no delay:
+	  0x00, 0x02,             //     XSTART = 2
+	  0x00, 0x81,             //     XEND = 129
+	ST7735_RASET  , 4      ,  // 16: Row addr set, 4 args, no delay:
+	  0x00, 0x02,             //     XSTART = 1
+	  0x00, 0x81,             //     XEND = 160
+	ST7735_NORON  ,   TFT_INIT_DELAY,  // 17: Normal display on, no args, w/delay
+	  10,                     //     10 ms delay
+	ST7735_DISPON ,   TFT_INIT_DELAY,  // 18: Main screen turn on, no args, w/delay
+	  255 };
+#else
 static const uint8_t Bcmd[] = {
   18,						// 18 commands in list:
   ST7735_SWRESET,   DELAY,	//  1: Software reset, no args, w/delay
@@ -158,6 +228,7 @@ static const uint8_t Bcmd[] = {
   ST7735_DISPON ,   DELAY,  	// 18: Main screen turn on, no args, w/delay
   255						//     255 = 500 ms delay
 };
+#endif
 
 // Init for 7735R, part 1 (red or green tab)
 // -----------------------------------------
@@ -192,7 +263,11 @@ static const uint8_t  Rcmd1[] = {
   0x8A, 0xEE,
   ST7735_VMCTR1 , 1      ,	// 12: Power control, 1 arg, no delay:
   0x0E,
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5stickC
+  ST7735_INVONN  , 0      ,		// 13: Don't invert display, no args, no delay
+#else
   ST7735_INVOFF , 0      ,		// 13: Don't invert display, no args, no delay
+#endif
   ST7735_MADCTL , 1      ,		// 14: Memory access control (directions), 1 arg:
   0xC0,						//     row addr/col addr, bottom to top refresh, RGB order
   ST7735_COLMOD , 1+DELAY,	//  15: Set color mode, 1 arg + delay:
@@ -247,20 +322,31 @@ static const uint8_t Rcmd3[] = {
 static const uint8_t Rcmd2green144[] = {              // Init for 7735R, part 2 (green 1.44 tab)
   2,                        //  2 commands in list:
   ST7735_CASET  , 4      ,  //  1: Column addr set, 4 args, no delay:
-    0x00, 0x00,             //     XSTART = 0
-    0x00, 0x7F,             //     XEND = 127
+	0x00, 0x00,             //     XSTART = 0
+	0x00, 0x7F,             //     XEND = 127
 	ST7735_PASET  , 4      ,  //  2: Row addr set, 4 args, no delay:
-    0x00, 0x00,             //     XSTART = 0
-    0x00, 0x7F };           //     XEND = 127
-
+	0x00, 0x00,             //     XSTART = 0
+	0x00, 0x7F };           //     XEND = 127
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5stickC
+static const uint8_t Rcmd2green160x80[] = {              // Init for 7735R, part 2 (mini 160x80)
+   2,                        //  2 commands in list:
+	ST7735_CASET  , 4      ,  //  1: Column addr set, 4 args, no delay:
+	  0x00, 0x02,             //     XSTART = 0
+	  0x00, 0x7F+0x02,        //     XEND = 127
+	ST7735_RASET  , 4      ,  //  2: Row addr set, 4 args, no delay:
+	  0x00, 0x01,             //     XSTART = 0
+	  0x00, 0x9F+0x01 };      //     XEND = 159
+#else
 static const uint8_t Rcmd2green160x80[] = {              // Init for 7735R, part 2 (mini 160x80)
    2,                        //  2 commands in list:
    ST7735_CASET  , 4      ,  //  1: Column addr set, 4 args, no delay:
-    0x00, 0x00,             //     XSTART = 0
-    0x00, 0x7F,             //     XEND = 79
+	0x00, 0x00,             //     XSTART = 0
+	0x00, 0x7F,             //     XEND = 79
 	ST7735_PASET  , 4      ,  //  2: Row addr set, 4 args, no delay:
-    0x00, 0x00,             //     XSTART = 0
-    0x00, 0x9F };           //     XEND = 159
+	0x00, 0x00,             //     XSTART = 0
+	0x00, 0x9F };           //     XEND = 159
+
+#endif
 
 /*
  * Helper functions
@@ -316,15 +402,16 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 	// Store chipset
 	chipset = chip;
 
-    // Init SPI bus
+	// Init SPI bus
 	if (caps->device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 30000000, SPI_FLAG_WRITE | SPI_FLAG_NO_DMA, &caps->device))) {
+//m5stickc		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 30000000, SPI_FLAG_WRITE | SPI_FLAG_NO_DMA, &caps->device))) {
+	if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 27000000, SPI_FLAG_WRITE | SPI_FLAG_NO_DMA, &caps->device))) {
 			return error;
 		}
 	}
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    driver_unit_lock_error_t *lock_error = NULL;
+	driver_unit_lock_error_t *lock_error = NULL;
 	if ((error = spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS))) {
 		return error;
 	}
@@ -349,9 +436,9 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 	gpio_ll_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_RESET);
 #endif
 
-    // Init display
-    uint8_t dt;
-    switch (chipset) {
+	// Init display
+	uint8_t dt;
+	switch (chipset) {
 		case CHIPSET_ST7735:
 			ST7735_commonInit(Rcmd1);
 			gdisplay_ll_command_list((uint8_t *)Rcmd2red);
@@ -379,10 +466,13 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 		case CHIPSET_ST7735_096:
 			ST7735_commonInit(Rcmd1);
 			gdisplay_ll_command_list(Rcmd2green160x80);
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5stickC
+	  //st7735_invert(true);
+#endif
 			break;
-    }
+	}
 
-    st7735_set_orientation(orientation);
+	st7735_set_orientation(orientation);
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer(ST7735_BUFFER)) {
@@ -390,44 +480,44 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 	}
 
 	// Clear screen (black)
-    st7735_clear(GDISPLAY_BLACK);
+	st7735_clear(GDISPLAY_BLACK);
 
-    gdisplay_ll_command(ST7735_DISPON); // Display On
+	gdisplay_ll_command(ST7735_DISPON); // Display On
 
-    return NULL;
+	return NULL;
 }
 
 void st7735_addr_window(uint8_t write, int x0, int y0, int x1, int y1) {
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 	uint32_t wd;
 
-    if ((x0 > caps->width) || (y0 > caps->height) || (x1 > caps->width) || (y1 > caps->height)) {
-        return;
-    }
+	if ((x0 > caps->width) || (y0 > caps->height) || (x1 > caps->width) || (y1 > caps->height)) {
+		return;
+	}
 
-    x0 += caps->xstart;
-    x1 += caps->xstart;
+	x0 += caps->xstart;
+	x1 += caps->xstart;
 
-    y0 += caps->ystart;
-    y1 += caps->ystart;
+	y0 += caps->ystart;
+	y1 += caps->ystart;
 
-    wd  = (uint32_t)(x0 >> 8);
+	wd  = (uint32_t)(x0 >> 8);
 	wd |= (uint32_t)(x0 & 0xff) << 8;
 	wd |= (uint32_t)(x1 >> 8) << 16;
 	wd |= (uint32_t)(x1 & 0xff) << 24;
 
-    gdisplay_ll_command(ST7735_CASET); // Column Address Set
-    gdisplay_ll_data32(wd);
+	gdisplay_ll_command(ST7735_CASET); // Column Address Set
+	gdisplay_ll_data32(wd);
 
 	wd  = (uint32_t)(y0 >> 8);
 	wd |= (uint32_t)(y0 & 0xff) << 8;
 	wd |= (uint32_t)(y1 >> 8) << 16;
 	wd |= (uint32_t)(y1 & 0xff) << 24;
 
-    gdisplay_ll_command(ST7735_PASET); // Row Address Set
-    gdisplay_ll_data32(wd);
+	gdisplay_ll_command(ST7735_PASET); // Row Address Set
+	gdisplay_ll_data32(wd);
 
-    gdisplay_ll_command((write?ST7735_RAMWR:ST7735_RAMRD));
+	gdisplay_ll_command((write?ST7735_RAMWR:ST7735_RAMRD));
 }
 
 void st7735_set_orientation(uint8_t m) {
@@ -462,7 +552,9 @@ void st7735_set_orientation(uint8_t m) {
 		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MV | variant[chipset -CHIPSET_ST7735_VARIANT_OFFSET].order);
 		break;
 	}
-
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5stickC
+  madctl = madctl | ST7735_MADCTL_BGR;
+#endif
 	gdisplay_ll_command(ST7735_MADCTL);
 	gdisplay_ll_data(&madctl, 1);
 }
@@ -500,7 +592,7 @@ void st7735_color(uint16_t *color, uint32_t len) {
 		buffer = color;
 	}
 
-    // Set DC to 1 (data mode);
+	// Set DC to 1 (data mode);
 	gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
 	spi_ll_select(caps->device);
 	if (len > 0) {

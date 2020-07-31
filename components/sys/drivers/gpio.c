@@ -969,7 +969,7 @@ driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_
     }
 
     if ((error = gpio_pin_pullup(pin))) {
-        return error;
+         return error;
     }
 
     if (pin < 40) {

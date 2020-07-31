@@ -83,7 +83,12 @@ static void _pwbus_init() {
 	mtx_init(&mtx, NULL, NULL, 0);
 
 	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#if CONFIG_LUA_RTOS_POWER_BUS_INV
+	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#else
 	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#endif
+
 	power = 0;
 }
 
@@ -104,7 +109,11 @@ driver_error_t *pwbus_on() {
 
 	clock_gettime(CLOCK_MONOTONIC, &uptime);
 
+#if CONFIG_LUA_RTOS_POWER_BUS_INV
+	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#else
 	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#endif
 
 	// Wait some time for power stabilization
 	delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
@@ -121,7 +130,11 @@ driver_error_t *pwbus_off() {
     	uptime.tv_sec = 0;
     	uptime.tv_nsec = 0;
 
+#if CONFIG_LUA_RTOS_POWER_BUS_INV
+		gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#else
 		gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+#endif
 		mtx_unlock(&mtx);
     }
 

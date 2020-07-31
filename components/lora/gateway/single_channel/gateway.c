@@ -147,6 +147,11 @@ static const uint8_t sf[] = {7, 8, 9, 10, 11, 12};
 static const uint32_t freq[] = { 868100000, 868300000, 868500000, 867100000, 867300000, 867500000, 867700000, 867900000, 868800000 };
 #endif
 
+#if CONFIG_LUA_RTOS_LORA_BAND_AS923
+static const uint8_t sf[] = {7, 8, 9, 10, 11, 12};
+static uint32_t freq[]   = { 923200000, 923400000, 923600000, 923800000, 924000000, 924200000, 924400000, 924600000, 924800000 };
+#endif
+
 #if CONFIG_LUA_RTOS_LORA_BAND_US915
 #error "Not supported US915"
 #endif

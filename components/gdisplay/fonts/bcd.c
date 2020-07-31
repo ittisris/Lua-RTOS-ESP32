@@ -132,26 +132,26 @@ void gdisplay_draw7seg(int x, int y, int num, int w, int l, int color, int fill,
 		gdisplay_rect_fill(x, y, (2 * (2 * w + 1)) + l, (3 * (2 * w + 1)) + (2 * l), fill, fill);
 	}
 
-	if ((c & 0x001))
-		gdisplay_barVert(x + d, y + d, w, l, color);
-	if ((c & 0x002))
-		gdisplay_barVert(x, y + d, w, l, color);
-	if ((c & 0x004))
-		gdisplay_barVert( x + d, y, w, l, color);
-	if ((c & 0x008))
-		gdisplay_barVert(x, y, w, l, color);
-	if ((c & 0x010))
-		gdisplay_barHor(x, y + 2 * d, w, l, color);
-	if ((c & 0x020))
-		gdisplay_barHor(x, y + d, w, l, color);
-	if ((c & 0x040))
-		gdisplay_barHor(x, y, w, l, color);
-
-	if ((c & 0x100))
-		gdisplay_rect_fill(x + (d / 2), y + d + 2 * w + 1, 2 * w + 1, l / 2, color, color);
-
-	if ((c & 0x800))
-		gdisplay_rect_fill(x + (d / 2), y + (2 * w) + 1 + (l / 2), 2 * w + 1, l / 2, color, color);
+//	if ((c & 0x001))
+//		gdisplay_barVert(x + d, y + d, w, l, color);
+//	if ((c & 0x002))
+//		gdisplay_barVert(x, y + d, w, l, color);
+//	if ((c & 0x004))
+//		gdisplay_barVert( x + d, y, w, l, color);
+//	if ((c & 0x008))
+//		gdisplay_barVert(x, y, w, l, color);
+//	if ((c & 0x010))
+//		gdisplay_barHor(x, y + 2 * d, w, l, color);
+//	if ((c & 0x020))
+//		gdisplay_barHor(x, y + d, w, l, color);
+//	if ((c & 0x040))
+//		gdisplay_barHor(x, y, w, l, color);
+//
+//	if ((c & 0x100))
+//		gdisplay_rect_fill(x + (d / 2), y + d + 2 * w + 1, 2 * w + 1, l / 2, color, color);
+//
+//	if ((c & 0x800))
+//		gdisplay_rect_fill(x + (d / 2), y + (2 * w) + 1 + (l / 2), 2 * w + 1, l / 2, color, color);
 
 	if (c & 0x001)
 		gdisplay_barVert(x + d, y + d, w, l, color);          // down right

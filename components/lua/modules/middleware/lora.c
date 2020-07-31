@@ -415,6 +415,54 @@ static int llora_get_ReTx(lua_State* L) {
     return 1;
 }
 
+static int llora_get_FCntUp(lua_State* L) {
+    if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_FCNTUP, &value);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    lua_pushinteger(L, atoi(value));
+    free(value);
+
+    return 1;
+}
+
+static int llora_get_FCntDn(lua_State* L) {
+    if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_FCNTDN, &value);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    lua_pushinteger(L, atoi(value));
+    free(value);
+
+    return 1;
+}
+
+static int llora_get_MsgID(lua_State* L) {
+    if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_MSGID, &value);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    lua_pushinteger(L, atoi(value));
+    free(value);
+
+    return 1;
+}
+
 static int llora_join(lua_State* L) {
 	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
 
@@ -487,14 +535,36 @@ static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "tx" ),           LFUNCVAL( llora_tx ) },
     { LSTRKEY( "whenReceived" ), LFUNCVAL( llora_rx ) },
 
+    { LSTRKEY( "getFCntUp"  ),    LFUNCVAL( llora_get_FCntUp ) },
+    { LSTRKEY( "getFCntDn"  ),    LFUNCVAL( llora_get_FCntDn ) },
+    { LSTRKEY( "getMsgID"  ),    LFUNCVAL( llora_get_MsgID ) },
+
 	// Constant definitions
     { LSTRKEY( "BAND868" ),		 LINTVAL( 868 ) },
     { LSTRKEY( "BAND433" ), 	 LINTVAL( 433 ) },
     { LSTRKEY( "BAND915" ), 	 LINTVAL( 915 ) },
+    { LSTRKEY( "BAND923" ),      LINTVAL( 923 ) },
 
     { LSTRKEY( "NODE"     ), 	 LINTVAL( 0 ) },
     { LSTRKEY( "GATEWAY"  ), 	 LINTVAL( 1 ) },
 
+    // scg
+    { LSTRKEY( "SF7"     ),     LINTVAL( 0 ) },
+    { LSTRKEY( "SF8"     ),     LINTVAL( 1 ) },
+    { LSTRKEY( "SF9"     ),     LINTVAL( 2 ) },
+    { LSTRKEY( "SF10"    ),     LINTVAL( 3 ) },
+    { LSTRKEY( "SF11"    ),     LINTVAL( 4 ) },
+    { LSTRKEY( "SF12"    ),     LINTVAL( 5 ) },
+
+    { LSTRKEY( "CHAN1"),     LINTVAL( 0 ) },
+    { LSTRKEY( "CHAN2"),     LINTVAL( 1 ) },
+    { LSTRKEY( "CHAN3"),     LINTVAL( 2 ) },
+    { LSTRKEY( "CHAN4"),     LINTVAL( 3 ) },
+    { LSTRKEY( "CHAN5"),     LINTVAL( 4 ) },
+    { LSTRKEY( "CHAN6"),     LINTVAL( 5 ) },
+    { LSTRKEY( "CHAN7"),     LINTVAL( 6 ) },
+    { LSTRKEY( "CHAN8"),     LINTVAL( 7 ) },
+    
 	DRIVER_REGISTER_LUA_ERRORS(lora)
 #endif
 

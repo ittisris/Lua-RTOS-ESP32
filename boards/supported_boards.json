@@ -327,11 +327,39 @@
             {
                 "id": "M5STACK",
                 "description": "M5Stack Core Board",
-                "filesystem": "default"
+                "filesystem": "m5stickc"
             },
             {
                 "id": "M5STACK-OTA",
                 "description": "M5Stack Core Board with OTA",
+                "filesystem": "m5stickc"
+            }
+        ]
+    },
+    {
+        "description": "M5StickC core board",
+        "manufacturer": "M5Stack",
+        "image": "https://www.m5stack.com/assets/images/p_core.png",
+        "usb_vid_pid": "0403:6001",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "M5STICKC",
+                "description": "M5StickC Code Board",
+                "filesystem": "m5stickc"
+            }
+        ]
+    },
+    {
+        "description": "Thailand’s ESP-32-based EduBoard",
+        "manufacturer": "NECTEC/Gravitech",
+        "image": "",
+        "usb_vid_pid": "0403:6015",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "KIDBRIGHT32",
+                "description": "Thailand’s ESP-32-based EduBoard",
                 "filesystem": "default"
             }
         ]

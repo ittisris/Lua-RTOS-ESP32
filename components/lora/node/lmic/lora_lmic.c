@@ -131,7 +131,7 @@ static u1_t setup = 0;
 static lora_rx *lora_rx_callback = NULL;
 
 // Table for translate numeric datarates to LMIC definitions
-#if CONFIG_LUA_RTOS_LORA_BAND_EU868
+#if CONFIG_LUA_RTOS_LORA_BAND_EU868 || CONFIG_LUA_RTOS_LORA_BAND_AS923
 static const u1_t data_rates[] = {
 	DR_SF12, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF7B, DR_FSK, DR_NONE,
 	DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE
@@ -153,8 +153,30 @@ static u1_t current_dr = 0;
 // ADR active?
 static u1_t adr = 0;
 
+static const char* evnames[] = {
+  "SCAN_TIMEOUT",
+  "BEACON_FOUND",
+  "BEACON_MISSED",
+  "BEACON_TRACKED",
+  "JOINING",
+  "JOINED",
+  "RFU1",
+  "JOIN_FAILED",
+  "REJOIN_FAILED",
+  "TXCOMPLETE",
+  "LOST_TSYNC",
+  "RESET",
+  "RXCOMPLETE",
+  "LINK_DEAD",
+  "LINK_ALIVE",
+  "SCAN_FOUND",
+  "TXSTART",
+};
+
 // LMIC event handler
 void onEvent (ev_t ev) {
+	syslog(LOG_DEBUG, "EV_%s", ((ev <= sizeof(evnames) / sizeof(evnames[0])) ? evnames[ev-1] : "UNKNOWN" ));
+	
     switch(ev) {
 	    case EV_SCAN_TIMEOUT:
 	      break;
@@ -179,18 +201,21 @@ void onEvent (ev_t ev) {
           memcpy(APPSKEY, LMIC.artKey, 16);
 
 		  xEventGroupSetBits(loraEvent, evLORA_JOINED);
+		  /* TTN uses SF9 for its RX2 window. */
+		  LMIC.dn2Dr = DR_SF9;
 	      break;
 
 	    case EV_RFU1:
 	      break;
 
 	    case EV_JOIN_FAILED:
-	      session_init = 0;
-		  xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
+			// session_init = 0;
+			// xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
 	      break;
 
 	    case EV_REJOIN_FAILED:
-	      session_init = 0;
+			session_init = 0;
+			xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
 	      break;
 
 	    case EV_TXCOMPLETE:
@@ -202,22 +227,20 @@ void onEvent (ev_t ev) {
 			  if (LMIC.txrxFlags & TXRX_NACK) {
 		  		  xEventGroupSetBits(loraEvent, evLORA_ACK_NOT_RECEIVED);
 			  }
-		  } else {
-		      if (LMIC.dataLen && lora_rx_callback) {
-				  // Make a copy of the payload and call callback function
-				  u1_t *payload = (u1_t *)malloc(LMIC.dataLen * 2 + 1);
-				  if (payload) {
-					  // Coding payload into an hex string
-					  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
-					  payload[LMIC.dataLen * 2] = 0x00;
+		  } else 
+		  	  xEventGroupSetBits(loraEvent, evLORA_TX_COMPLETE);
 
-					  lora_rx_callback(1, (char *)payload);
-				  }
-		      }
+	      if (LMIC.dataLen && lora_rx_callback) {
+			  // Make a copy of the payload and call callback function
+			  u1_t *payload = (u1_t *)malloc(LMIC.dataLen * 2 + 1);
+			  if (payload) {
+				  // Coding payload into an hex string
+				  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
+				  payload[LMIC.dataLen * 2] = 0x00;
 
-		      xEventGroupSetBits(loraEvent, evLORA_TX_COMPLETE);
-		  }
-
+				  lora_rx_callback(LMIC.frame[LMIC.dataBeg - 1], (char *)payload);
+			  }
+	      }
 	      break;
 
 	    case EV_LOST_TSYNC:
@@ -235,6 +258,16 @@ void onEvent (ev_t ev) {
 	    case EV_LINK_ALIVE:
 	      break;
 
+		case EV_TXSTART:
+			// uint8_t sf;
+			// sf = getSf(LMIC.rps) + 6; // 1 == SF7
+			// u1_t bw = getBw(LMIC.rps);
+			// u1_t cr = getCr(LMIC.rps);
+			// Serial.println(sf);
+			// Serial.println(LMIC.adrTxPow);
+			// syslog(LOG_DEBUG, "TxPow = %d",LMIC.adrTxPow);
+	      break;
+
 	    default:
 	      break;
   	}
@@ -244,6 +277,15 @@ void onEvent (ev_t ev) {
 static void lora_init(osjob_t *j) {
     // Reset MAC state
     LMIC_reset();
+
+	#if CONFIG_LUA_RTOS_LORA_BAND_AS923
+		// LMIC_setClockError(MAX_CLOCK_ERROR * 1 / 100);
+		// LMIC_setupChannel(2, 923600000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+		// LMIC_setupChannel(3, 923800000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+		// LMIC_setupChannel(4, 924000000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+		// LMIC_setupChannel(5, 924200000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+		// LMIC_setupChannel(6, 924400000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+	#endif
 
     // Add channels
 	#if CONFIG_LUA_RTOS_LORA_BAND_EU868
@@ -263,7 +305,7 @@ static void lora_init(osjob_t *j) {
 	#endif
 
 	// Disable link check validation
-    LMIC_setLinkCheckMode(0);
+    LMIC_setLinkCheckMode(1);
 
     // ADR disabled
     adr = 0;
@@ -282,7 +324,7 @@ static void lora_init(osjob_t *j) {
 
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
     current_dr = DR_SF7;
-    LMIC_setDrTxpow(current_dr, 14);
+    LMIC_setDrTxpow(current_dr, 16);
 
 	// Inform waiting thread that stack is initialized
     xEventGroupSetBits(loraEvent, evLORA_INITED);
@@ -293,6 +335,13 @@ driver_error_t *lora_setup(int band) {
 	#if CONFIG_LUA_RTOS_LORA_BAND_EU868
 	if (band != 868) {
 		return driver_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
+	}
+	#endif
+
+	#if  CONFIG_LUA_RTOS_LORA_BAND_AS923
+	if (band != 923) {
+		band = 923;	//return driver_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
+		syslog(LOG_DEBUG, "Only band %d Supported", band);
 	}
 	#endif
 
@@ -390,7 +439,7 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 			current_dr = dr;
 
 			if (!adr) {
-				LMIC_setDrTxpow(current_dr, 14);
+				LMIC_setDrTxpow(current_dr, 10);
 			}
 
 			break;
@@ -489,6 +538,27 @@ driver_error_t *lora_mac_get(const char command, char **value) {
 				sprintf(result,"%d",LMIC.txAttempts);
 			}
 			break;
+
+		case LORA_MAC_GET_FCNTUP:
+			result = (char *)malloc(11);
+			if (result) {
+				sprintf(result,"%d",LMIC.seqnoUp);
+			}
+			break;
+
+		case LORA_MAC_GET_FCNTDN:
+			result = (char *)malloc(11);
+			if (result) {
+				sprintf(result,"%d",LMIC.seqnoDn);
+			}
+			break;
+
+		case LORA_MAC_GET_MSGID:
+			result = (char *)malloc(11);
+			if (result) {
+				sprintf(result,"%d",msgid);
+			}
+			break;
 	}
 
     mtx_unlock(&lora_mtx);
@@ -527,7 +597,7 @@ driver_error_t *lora_join() {
 
     // Set DR
     if (!adr) {
-        LMIC_setDrTxpow(current_dr, 14);
+        LMIC_setDrTxpow(current_dr, 16);
     }
 
     // Do join
@@ -565,6 +635,16 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
         if (!session_init) {
             // Session data is available, so set session if it has not yet been done
             LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
+#if CONFIG_LUA_RTOS_LORA_BAND_AS923
+			LMIC_setClockError(MAX_CLOCK_ERROR * 1 / 100);
+  			LMIC_setupChannel(2, 923600000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+	    	LMIC_setupChannel(3, 923800000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+	    	LMIC_setupChannel(4, 924000000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+	    	LMIC_setupChannel(5, 924200000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+	    	LMIC_setupChannel(6, 924400000, DR_RANGE_MAP(AS923_DR_SF12, AS923_DR_SF7),  BAND_CENTI);
+	    	/* TTN uses SF9 for its RX2 window. */
+    		LMIC.dn2Dr = DR_SF9;
+#endif
             session_init = 1;
         }
     } else {

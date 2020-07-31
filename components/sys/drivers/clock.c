@@ -57,24 +57,61 @@
 static volatile uint64_t tdelta = 0;
 
 unsigned int activity = 0;
+#endif
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+#include <sys/status.h>
+#include <drivers/kidbright32.h>
+static volatile uint64_t wdelta = 0;
+#endif
 
 void IRAM_ATTR newTick(void) {
+#if (CONFIG_LUA_RTOS_LED_ACT >= 0)
     tdelta++;
     if (tdelta == configTICK_RATE_HZ) {
         // 1 second since last second
         tdelta = 0;
 
         if (activity <= 0) {
-			activity = 0;
-			gpio_ll_pin_inv(CONFIG_LUA_RTOS_LED_ACT);
-		}
+            activity = 0;
+            gpio_ll_pin_inv(CONFIG_LUA_RTOS_LED_ACT);
+        }
     }
-}
-
 #endif
 
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+    wdelta++;
+    if (wdelta == (configTICK_RATE_HZ / 10))
+    {
+        if(status_get(STATUS_WIFI_CONNECTED)) {
+            #if (LED_ON == 0)
+            gpio_ll_pin_set(WIFI_LED_GPIO);
+            #else
+            gpio_ll_pin_clr(WIFI_LED_GPIO);
+            #endif
+        }
+        else {
+            wdelta = 0;
+            if (status_get(STATUS_WIFI_INITED)) {
+                gpio_ll_pin_inv(WIFI_LED_GPIO);
+            }     
+        }    
+    }
+
+    if (wdelta == (configTICK_RATE_HZ * 10))
+    {
+        #if (LED_ON == 0)
+        gpio_ll_pin_clr(WIFI_LED_GPIO);
+        #else
+        gpio_ll_pin_set(WIFI_LED_GPIO);
+        #endif
+        wdelta = 0;
+    }
+#endif
+}
+
 void _clock_init(void) {
-	#if (CONFIG_LUA_RTOS_LED_ACT >= 0)
+    #if ((CONFIG_LUA_RTOS_LED_ACT >= 0) || CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32 )
     esp_register_freertos_tick_hook(&newTick);
-	#endif
+    #endif
 }

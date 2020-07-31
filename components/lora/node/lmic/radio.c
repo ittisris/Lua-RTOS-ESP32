@@ -18,6 +18,10 @@
 #include "lmic.h"
 #include <sys/syslog.h>
 
+#if CONFIG_LUA_RTOS_FIRMWARE_HELTEC 		//Heltec wireless shell
+#define Heltec
+#endif
+
 // ----------------------------------------
 // Registers Mapping
 #define RegFifo                                    0x00 // common
@@ -124,7 +128,7 @@
 // #define RegAgcThresh3                              0x46 // common
 // #define RegPllHop                                  0x4B // common
 // #define RegTcxo                                    0x58 // common
-#define RegPaDac                                   0x5A // common
+#define RegPaDac                                    0x4d    //0x5A // common
 // #define RegPll                                     0x5C // common
 // #define RegPllLowPn                                0x5E // common
 // #define RegFormerTemp                              0x6C // common
@@ -183,8 +187,6 @@
 #elif CFG_sx1272_radio
 #define RXLORA_RXMODE_RSSI_REG_MODEM_CONFIG2 0x74
 #endif
-
-
 
 // ----------------------------------------
 // Constants for radio registers
@@ -286,7 +288,7 @@ static void writeBuf (u1_t addr, xref2u1_t buf, u1_t len) {
     hal_pin_nss(0);
     hal_spi(addr | 0x80);
     for (u1_t i=0; i<len; i++) {
-        hal_spi(buf[i]);
+	hal_spi(buf[i]);
     }
     hal_pin_nss(1);
 }
@@ -295,7 +297,7 @@ static void IRAM_ATTR readBuf (u1_t addr, xref2u1_t buf, u1_t len) {
     hal_pin_nss(0);
     hal_spi(addr & 0x7F);
     for (u1_t i=0; i<len; i++) {
-        buf[i] = hal_spi(0x00);
+	buf[i] = hal_spi(0x00);
     }
     hal_pin_nss(1);
 }
@@ -325,69 +327,69 @@ static void configLoraModem () {
     sf_t sf = getSf(LMIC.rps);
 
 #ifdef CFG_sx1276_radio
-        u1_t mc1 = 0, mc2 = 0, mc3 = 0;
+	u1_t mc1 = 0, mc2 = 0, mc3 = 0;
 
-        switch (getBw(LMIC.rps)) {
-        case BW125: mc1 |= SX1276_MC1_BW_125; break;
-        case BW250: mc1 |= SX1276_MC1_BW_250; break;
-        case BW500: mc1 |= SX1276_MC1_BW_500; break;
-        default:
-            LMIC_ASSERT(0);
-        }
-        switch( getCr(LMIC.rps) ) {
-        case CR_4_5: mc1 |= SX1276_MC1_CR_4_5; break;
-        case CR_4_6: mc1 |= SX1276_MC1_CR_4_6; break;
-        case CR_4_7: mc1 |= SX1276_MC1_CR_4_7; break;
-        case CR_4_8: mc1 |= SX1276_MC1_CR_4_8; break;
-        default:
-            LMIC_ASSERT(0);
-        }
+	switch (getBw(LMIC.rps)) {
+	case BW125: mc1 |= SX1276_MC1_BW_125; break;
+	case BW250: mc1 |= SX1276_MC1_BW_250; break;
+	case BW500: mc1 |= SX1276_MC1_BW_500; break;
+	default:
+	    LMIC_ASSERT(0);
+	}
+	switch( getCr(LMIC.rps) ) {
+	case CR_4_5: mc1 |= SX1276_MC1_CR_4_5; break;
+	case CR_4_6: mc1 |= SX1276_MC1_CR_4_6; break;
+	case CR_4_7: mc1 |= SX1276_MC1_CR_4_7; break;
+	case CR_4_8: mc1 |= SX1276_MC1_CR_4_8; break;
+	default:
+	    LMIC_ASSERT(0);
+	}
 
-        if (getIh(LMIC.rps)) {
-            mc1 |= SX1276_MC1_IMPLICIT_HEADER_MODE_ON;
-            writeReg(LORARegPayloadLength, getIh(LMIC.rps)); // required length
-        }
-        // set ModemConfig1
-        writeReg(LORARegModemConfig1, mc1);
+	if (getIh(LMIC.rps)) {
+	    mc1 |= SX1276_MC1_IMPLICIT_HEADER_MODE_ON;
+	    writeReg(LORARegPayloadLength, getIh(LMIC.rps)); // required length
+	}
+	// set ModemConfig1
+	writeReg(LORARegModemConfig1, mc1);
 
-        mc2 = (SX1272_MC2_SF7 + ((sf-1)<<4));
-        if (getNocrc(LMIC.rps) == 0) {
-            mc2 |= SX1276_MC2_RX_PAYLOAD_CRCON;
-        }
-        writeReg(LORARegModemConfig2, mc2);
+	mc2 = (SX1272_MC2_SF7 + ((sf-1)<<4));
+	if (getNocrc(LMIC.rps) == 0) {
+	    mc2 |= SX1276_MC2_RX_PAYLOAD_CRCON;
+	}
+	writeReg(LORARegModemConfig2, mc2);
 
-        mc3 = SX1276_MC3_AGCAUTO;
-        if ((sf == SF11 || sf == SF12) && getBw(LMIC.rps) == BW125) {
-            mc3 |= SX1276_MC3_LOW_DATA_RATE_OPTIMIZE;
-        }
-        writeReg(LORARegModemConfig3, mc3);
+	mc3 = SX1276_MC3_AGCAUTO;
+	if ((sf == SF11 || sf == SF12) && getBw(LMIC.rps) == BW125) {
+	    mc3 |= SX1276_MC3_LOW_DATA_RATE_OPTIMIZE;
+	}
+	writeReg(LORARegModemConfig3, mc3);
 #elif CFG_sx1272_radio
-        u1_t mc1 = (getBw(LMIC.rps)<<6);
+	u1_t mc1 = (getBw(LMIC.rps)<<6);
 
-        switch( getCr(LMIC.rps) ) {
-        case CR_4_5: mc1 |= SX1272_MC1_CR_4_5; break;
-        case CR_4_6: mc1 |= SX1272_MC1_CR_4_6; break;
-        case CR_4_7: mc1 |= SX1272_MC1_CR_4_7; break;
-        case CR_4_8: mc1 |= SX1272_MC1_CR_4_8; break;
-        }
+	switch( getCr(LMIC.rps) ) {
+	case CR_4_5: mc1 |= SX1272_MC1_CR_4_5; break;
+	case CR_4_6: mc1 |= SX1272_MC1_CR_4_6; break;
+	case CR_4_7: mc1 |= SX1272_MC1_CR_4_7; break;
+	case CR_4_8: mc1 |= SX1272_MC1_CR_4_8; break;
+	}
 
-        if ((sf == SF11 || sf == SF12) && getBw(LMIC.rps) == BW125) {
-            mc1 |= SX1272_MC1_LOW_DATA_RATE_OPTIMIZE;
-        }
+	if ((sf == SF11 || sf == SF12) && getBw(LMIC.rps) == BW125) {
+	    mc1 |= SX1272_MC1_LOW_DATA_RATE_OPTIMIZE;
+	}
 
-        if (getNocrc(LMIC.rps) == 0) {
-            mc1 |= SX1272_MC1_RX_PAYLOAD_CRCON;
-        }
+	if (getNocrc(LMIC.rps) == 0) {
+	    mc1 |= SX1272_MC1_RX_PAYLOAD_CRCON;
+	}
 
-        if (getIh(LMIC.rps)) {
-            mc1 |= SX1272_MC1_IMPLICIT_HEADER_MODE_ON;
-            writeReg(LORARegPayloadLength, getIh(LMIC.rps)); // required length
-        }
-        // set ModemConfig1
-        writeReg(LORARegModemConfig1, mc1);
+	if (getIh(LMIC.rps)) {
+	    mc1 |= SX1272_MC1_IMPLICIT_HEADER_MODE_ON;
+	    writeReg(LORARegPayloadLength, getIh(LMIC.rps)); // required length
+	}
+	// set ModemConfig1
+	writeReg(LORARegModemConfig1, mc1);
 
-        // set ModemConfig2 (sf, AgcAutoOn=1 SymbTimeoutHi=00)
-        writeReg(LORARegModemConfig2, (SX1272_MC2_SF7 + ((sf-1)<<4)) | 0x04);
+	// set ModemConfig2 (sf, AgcAutoOn=1 SymbTimeoutHi=00)
+	writeReg(LORARegModemConfig2, (SX1272_MC2_SF7 + ((sf-1)<<4)) | 0x04);
 #else
 #error Missing CFG_sx1272_radio/CFG_sx1276_radio
 #endif /* CFG_sx1272_radio */
@@ -402,15 +404,110 @@ static void configChannel () {
 }
 
 
+#ifdef Heltec 		//Heltec wireless shell
 
+#define REG_PA_CONFIG            0x09
+#define REG_PaDac                0x4d//add REG_PaDac
+
+#define PA_OUTPUT_PA_BOOST_PIN  1
+#define PA_OUTPUT_RFO_PIN       0
+
+/*!
+ * RegPaConfig
+ */
+#define RF_PACONFIG_PASELECT_MASK                   0x7F
+#define RF_PACONFIG_PASELECT_PABOOST                0x80
+#define RF_PACONFIG_PASELECT_RFO                    0x00 // Default
+
+#define RF_PACONFIG_MAX_POWER_MASK                  0x8F
+
+#define RF_PACONFIG_OUTPUTPOWER_MASK                0xF0
+
+/*!
+ * RegPaDac
+ */
+#define RF_PADAC_20DBM_MASK                         0xF8
+#define RF_PADAC_20DBM_ON                           0x07
+#define RF_PADAC_20DBM_OFF                          0x04  // Default
+
+static void configPower () {
+
+    int8_t outputPin = RF_PACONFIG_PASELECT_RFO;
+    uint8_t paConfig = 0;
+    uint8_t paDac = 0;
+
+
+    s1_t power = (s1_t)LMIC.txpow;
+
+    //writeReg(REG_PaDac,0x87);//Open PA_BOOST
+
+    paConfig = readReg( REG_PA_CONFIG );
+    paDac = readReg( REG_PaDac );
+
+    paConfig = ( paConfig & RF_PACONFIG_PASELECT_MASK ) | outputPin;
+    paConfig = ( paConfig & RF_PACONFIG_MAX_POWER_MASK ) | 0x70;
+
+    if( ( paConfig & RF_PACONFIG_PASELECT_PABOOST ) == RF_PACONFIG_PASELECT_PABOOST )
+    {
+		if( power > 17 )
+		{
+		  paDac = ( paDac & RF_PADAC_20DBM_MASK ) | RF_PADAC_20DBM_ON;
+		}
+		else
+		{
+		  paDac = ( paDac & RF_PADAC_20DBM_MASK ) | RF_PADAC_20DBM_OFF;
+		}
+		if( ( paDac & RF_PADAC_20DBM_ON ) == RF_PADAC_20DBM_ON )
+		{
+		  if( power < 5 )
+		  {
+		    power = 5;
+		  }
+		  if( power > 20 )
+		  {
+		    power = 20;
+		  }
+		  paConfig = ( paConfig & RF_PACONFIG_OUTPUTPOWER_MASK ) | ( uint8_t )( ( uint16_t )( power - 5 ) & 0x0F );
+		}
+		else
+		{
+		  if( power < 2 )
+		  {
+		    power = 2;
+		  }
+		  if( power > 17 )
+		  {
+		    power = 17;
+		  }
+		  paConfig = ( paConfig & RF_PACONFIG_OUTPUTPOWER_MASK ) | ( uint8_t )( ( uint16_t )( power - 2 ) & 0x0F );
+		}
+    }
+    else
+    {
+		if( power < -1 )
+		{
+		  power = -1;
+		}
+		if( power > 14 )
+		{
+		  power = 14;
+		}
+		paConfig = ( paConfig & RF_PACONFIG_OUTPUTPOWER_MASK ) | ( uint8_t )( ( uint16_t )( power + 1 ) & 0x0F );
+    }
+    
+    writeReg( REG_PA_CONFIG, paConfig );
+    writeReg( REG_PaDac, paDac );
+}
+
+#else
 static void configPower () {
 #ifdef CFG_sx1276_radio
     // no boost used for now
     s1_t pw = (s1_t)LMIC.txpow;
     if(pw >= 17) {
-        pw = 15;
+	pw = 15;
     } else if(pw < 2) {
-        pw = 2;
+	pw = 2;
     }
     // check board type for BOOST pin
     writeReg(RegPaConfig, (u1_t)(0x80|(pw&0xf)));
@@ -420,15 +517,16 @@ static void configPower () {
     // set PA config (2-17 dBm using PA_BOOST)
     s1_t pw = (s1_t)LMIC.txpow;
     if(pw > 17) {
-        pw = 17;
+	pw = 17;
     } else if(pw < 2) {
-        pw = 2;
+	pw = 2;
     }
     writeReg(RegPaConfig, (u1_t)(0x80|(pw-2)));
 #else
 #error Missing CFG_sx1272_radio/CFG_sx1276_radio
 #endif /* CFG_sx1272_radio */
 }
+#endif
 
 static void txfsk () {
     // select FSK modem (from sleep mode)
@@ -516,10 +614,10 @@ static void txlora () {
     u1_t bw = getBw(LMIC.rps);
     u1_t cr = getCr(LMIC.rps);
     syslog(LOG_DEBUG, "%lu: TXMODE, freq=%lu, len=%d, SF=%d, BW=%d, CR=4/%d, IH=%d\n",
-    		(u4_t)os_getTime(), LMIC.freq, LMIC.dataLen, sf,
-           bw == BW125 ? 125 : (bw == BW250 ? 250 : 500),
-           cr == CR_4_5 ? 5 : (cr == CR_4_6 ? 6 : (cr == CR_4_7 ? 7 : 8)),
-           getIh(LMIC.rps)
+		(u4_t)os_getTime(), LMIC.freq, LMIC.dataLen, sf,
+	   bw == BW125 ? 125 : (bw == BW250 ? 250 : 500),
+	   cr == CR_4_5 ? 5 : (cr == CR_4_6 ? 6 : (cr == CR_4_7 ? 7 : 8)),
+	   getIh(LMIC.rps)
    );
 }
 
@@ -527,9 +625,9 @@ static void txlora () {
 static void starttx () {
     LMIC_ASSERT( (readReg(RegOpMode) & OPMODE_MASK) == OPMODE_SLEEP );
     if(getSf(LMIC.rps) == FSK) { // FSK modem
-        txfsk();
+	txfsk();
     } else { // LoRa modem
-        txlora();
+	txlora();
     }
     // the radio will go back to STANDBY mode as soon as the TX is finished
     // the corresponding IRQ will inform us about completion.
@@ -552,13 +650,13 @@ static void rxlora (u1_t rxmode) {
     opmode(OPMODE_STANDBY);
     // don't use MAC settings at startup
     if(rxmode == RXMODE_RSSI) { // use fixed settings for rssi scan
-        writeReg(LORARegModemConfig1, RXLORA_RXMODE_RSSI_REG_MODEM_CONFIG1);
-        writeReg(LORARegModemConfig2, RXLORA_RXMODE_RSSI_REG_MODEM_CONFIG2);
+	writeReg(LORARegModemConfig1, RXLORA_RXMODE_RSSI_REG_MODEM_CONFIG1);
+	writeReg(LORARegModemConfig2, RXLORA_RXMODE_RSSI_REG_MODEM_CONFIG2);
     } else { // single or continuous rx mode
-        // configure LoRa modem (cfg1, cfg2)
-        configLoraModem();
-        // configure frequency
-        configChannel();
+	// configure LoRa modem (cfg1, cfg2)
+	configLoraModem();
+	// configure frequency
+	configChannel();
     }
     // set LNA gain
     writeReg(RegLna, LNA_RX_GAIN);
@@ -585,25 +683,25 @@ static void rxlora (u1_t rxmode) {
 
     // now instruct the radio to receive
     if (rxmode == RXMODE_SINGLE) { // single rx
-        hal_waitUntil(LMIC.rxtime); // busy wait until exact rx time
-        opmode(OPMODE_RX_SINGLE);
+	hal_waitUntil(LMIC.rxtime); // busy wait until exact rx time
+	opmode(OPMODE_RX_SINGLE);
     } else { // continous rx (scan or rssi)
-        opmode(OPMODE_RX);
+	opmode(OPMODE_RX);
     }
 
     if (rxmode == RXMODE_RSSI) {
-        syslog(LOG_DEBUG, "%lu: RXMODE_RSSI\n", (u4_t)os_getTime());
+	syslog(LOG_DEBUG, "%lu: RXMODE_RSSI\n", (u4_t)os_getTime());
     } else {
-        u1_t sf = getSf(LMIC.rps) + 6; // 1 == SF7
-        u1_t bw = getBw(LMIC.rps);
-        u1_t cr = getCr(LMIC.rps);
-        syslog(LOG_DEBUG, "%lu: %s, freq=%lu, SF=%d, BW=%d, CR=4/%d, IH=%d\n",
-               (u4_t)os_getTime(),
-               rxmode == RXMODE_SINGLE ? "RXMODE_SINGLE" : (rxmode == RXMODE_SCAN ? "RXMODE_SCAN" : "UNKNOWN_RX"),
-               LMIC.freq, sf,
-               bw == BW125 ? 125 : (bw == BW250 ? 250 : 500),
-               cr == CR_4_5 ? 5 : (cr == CR_4_6 ? 6 : (cr == CR_4_7 ? 7 : 8)),
-               getIh(LMIC.rps)
+	u1_t sf = getSf(LMIC.rps) + 6; // 1 == SF7
+	u1_t bw = getBw(LMIC.rps);
+	u1_t cr = getCr(LMIC.rps);
+	syslog(LOG_DEBUG, "%lu: %s, freq=%lu, SF=%d, BW=%d, CR=4/%d, IH=%d\n",
+	       (u4_t)os_getTime(),
+	       rxmode == RXMODE_SINGLE ? "RXMODE_SINGLE" : (rxmode == RXMODE_SCAN ? "RXMODE_SCAN" : "UNKNOWN_RX"),
+	       LMIC.freq, sf,
+	       bw == BW125 ? 125 : (bw == BW250 ? 250 : 500),
+	       cr == CR_4_5 ? 5 : (cr == CR_4_6 ? 6 : (cr == CR_4_7 ? 7 : 8)),
+	       getIh(LMIC.rps)
        );
     }
 }
@@ -662,9 +760,9 @@ static void rxfsk (u1_t rxmode) {
 static void startrx (u1_t rxmode) {
     LMIC_ASSERT( (readReg(RegOpMode) & OPMODE_MASK) == OPMODE_SLEEP );
     if(getSf(LMIC.rps) == FSK) { // FSK modem
-        rxfsk(rxmode);
+	rxfsk(rxmode);
     } else { // LoRa modem
-        rxlora(rxmode);
+	rxlora(rxmode);
     }
     // the radio will go back to STANDBY mode as soon as the RX is finished
     // or timed out, and the corresponding IRQ will inform us about completion.
@@ -680,9 +778,21 @@ int radio_init () {
 #else
     hal_pin_rst(1); // drive RST pin high
 #endif
+
+#ifdef Heltec
+    hal_waitUntil(os_getTime()+ms2osticks(20)); // wait >100us
+# ifdef CFG_sx1276_radio
+    hal_pin_rst(1); // drive RST pin high
+# else
+    hal_pin_rst(2); // configure RST pin floating!
+# endif
+    hal_waitUntil(os_getTime()+ms2osticks(50)); // wait 5ms
+
+#else
     hal_waitUntil(os_getTime()+ms2osticks(1)); // wait >100us
     hal_pin_rst(2); // configure RST pin floating!
     hal_waitUntil(os_getTime()+ms2osticks(5)); // wait 5ms
+#endif
 
     opmode(OPMODE_SLEEP);
 
@@ -690,13 +800,13 @@ int radio_init () {
     u1_t v = readReg(RegVersion);
 #ifdef CFG_sx1276_radio
     if (v != 0x12 ) {
-    	hal_enableIRQs();
-    	return -1;
+	hal_enableIRQs();
+	return -1;
     }
 #elif CFG_sx1272_radio
     if (v != 0x22) {
-    	hal_enableIRQs();
-    	return -1;
+	hal_enableIRQs();
+	return -1;
     }
 #else
 #error Missing CFG_sx1272_radio/CFG_sx1276_radio
@@ -705,11 +815,11 @@ int radio_init () {
     rxlora(RXMODE_RSSI);
     while( (readReg(RegOpMode) & OPMODE_MASK) != OPMODE_RX ); // continuous rx
     for(int i=1; i<16; i++) {
-        for(int j=0; j<8; j++) {
-            u1_t b; // wait for two non-identical subsequent least-significant bits
-            while( (b = readReg(LORARegRssiWideband) & 0x01) == (readReg(LORARegRssiWideband) & 0x01) );
-            randbuf[i] = (randbuf[i] << 1) | b;
-        }
+	for(int j=0; j<8; j++) {
+	    u1_t b; // wait for two non-identical subsequent least-significant bits
+	    while( (b = readReg(LORARegRssiWideband) & 0x01) == (readReg(LORARegRssiWideband) & 0x01) );
+	    randbuf[i] = (randbuf[i] << 1) | b;
+	}
     }
     randbuf[0] = 16; // set initial index
 
@@ -745,8 +855,8 @@ u1_t radio_rand1 () {
     u1_t i = randbuf[0];
     LMIC_ASSERT( i != 0 );
     if( i==16 ) {
-        os_aes(AES_ENC, randbuf, 16); // encrypt seed with any key
-        i = 0;
+	os_aes(AES_ENC, randbuf, 16); // encrypt seed with any key
+	i = 0;
     }
     u1_t v = randbuf[i++];
     randbuf[0] = i;
@@ -775,56 +885,56 @@ static CONST_TABLE(u2_t, LORA_RXDONE_FIXUP)[] = {
 void radio_irq_handler (u1_t dio) {
     ostime_t now = os_getTime();
     if( (readReg(RegOpMode) & OPMODE_LORA) != 0) { // LORA modem
-        u1_t flags = readReg(LORARegIrqFlags);
-        if( flags & IRQ_LORA_TXDONE_MASK ) {
-            // save exact tx time
-            LMIC.txend = now - us2osticks(43); // TXDONE FIXUP
-        } else if( flags & IRQ_LORA_RXDONE_MASK ) {
-            // save exact rx time
-            if(getBw(LMIC.rps) == BW125) {
-                now -= TABLE_GET_U2(LORA_RXDONE_FIXUP, getSf(LMIC.rps));
-            }
-            LMIC.rxtime = now;
-            // read the PDU and inform the MAC that we received something
-            LMIC.dataLen = (readReg(LORARegModemConfig1) & SX1272_MC1_IMPLICIT_HEADER_MODE_ON) ?
-                readReg(LORARegPayloadLength) : readReg(LORARegRxNbBytes);
-            // set FIFO read address pointer
-            writeReg(LORARegFifoAddrPtr, readReg(LORARegFifoRxCurrentAddr));
-            // now read the FIFO
-            readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
-            // read rx quality parameters
-            LMIC.snr  = readReg(LORARegPktSnrValue); // SNR [dB] * 4
-            LMIC.rssi = readReg(LORARegPktRssiValue) - 125 + 64; // RSSI [dBm] (-196...+63)
-        } else if( flags & IRQ_LORA_RXTOUT_MASK ) {
-            // indicate timeout
-            LMIC.dataLen = 0;
-        }
-        // mask all radio IRQs
-        writeReg(LORARegIrqFlagsMask, 0xFF);
-        // clear radio IRQ flags
-        writeReg(LORARegIrqFlags, 0xFF);
+	u1_t flags = readReg(LORARegIrqFlags);
+	if( flags & IRQ_LORA_TXDONE_MASK ) {
+	    // save exact tx time
+	    LMIC.txend = now - us2osticks(43); // TXDONE FIXUP
+	} else if( flags & IRQ_LORA_RXDONE_MASK ) {
+	    // save exact rx time
+	    if(getBw(LMIC.rps) == BW125) {
+		now -= TABLE_GET_U2(LORA_RXDONE_FIXUP, getSf(LMIC.rps));
+	    }
+	    LMIC.rxtime = now;
+	    // read the PDU and inform the MAC that we received something
+	    LMIC.dataLen = (readReg(LORARegModemConfig1) & SX1272_MC1_IMPLICIT_HEADER_MODE_ON) ?
+		readReg(LORARegPayloadLength) : readReg(LORARegRxNbBytes);
+	    // set FIFO read address pointer
+	    writeReg(LORARegFifoAddrPtr, readReg(LORARegFifoRxCurrentAddr));
+	    // now read the FIFO
+	    readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+	    // read rx quality parameters
+	    LMIC.snr  = readReg(LORARegPktSnrValue); // SNR [dB] * 4
+	    LMIC.rssi = readReg(LORARegPktRssiValue) - 125 + 64; // RSSI [dBm] (-196...+63)
+	} else if( flags & IRQ_LORA_RXTOUT_MASK ) {
+	    // indicate timeout
+	    LMIC.dataLen = 0;
+	}
+	// mask all radio IRQs
+	writeReg(LORARegIrqFlagsMask, 0xFF);
+	// clear radio IRQ flags
+	writeReg(LORARegIrqFlags, 0xFF);
     } else { // FSK modem
-        u1_t flags1 = readReg(FSKRegIrqFlags1);
-        u1_t flags2 = readReg(FSKRegIrqFlags2);
-        if( flags2 & IRQ_FSK2_PACKETSENT_MASK ) {
-            // save exact tx time
-            LMIC.txend = now;
-        } else if( flags2 & IRQ_FSK2_PAYLOADREADY_MASK ) {
-            // save exact rx time
-            LMIC.rxtime = now;
-            // read the PDU and inform the MAC that we received something
-            LMIC.dataLen = readReg(FSKRegPayloadLength);
-            // now read the FIFO
-            readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
-            // read rx quality parameters
-            LMIC.snr  = 0; // determine snr
-            LMIC.rssi = 0; // determine rssi
-        } else if( flags1 & IRQ_FSK1_TIMEOUT_MASK ) {
-            // indicate timeout
-            LMIC.dataLen = 0;
-        } else {
-            LMIC_ASSERT(0);
-        }
+	u1_t flags1 = readReg(FSKRegIrqFlags1);
+	u1_t flags2 = readReg(FSKRegIrqFlags2);
+	if( flags2 & IRQ_FSK2_PACKETSENT_MASK ) {
+	    // save exact tx time
+	    LMIC.txend = now;
+	} else if( flags2 & IRQ_FSK2_PAYLOADREADY_MASK ) {
+	    // save exact rx time
+	    LMIC.rxtime = now;
+	    // read the PDU and inform the MAC that we received something
+	    LMIC.dataLen = readReg(FSKRegPayloadLength);
+	    // now read the FIFO
+	    readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+	    // read rx quality parameters
+	    LMIC.snr  = 0; // determine snr
+	    LMIC.rssi = 0; // determine rssi
+	} else if( flags1 & IRQ_FSK1_TIMEOUT_MASK ) {
+	    // indicate timeout
+	    LMIC.dataLen = 0;
+	} else {
+	    LMIC_ASSERT(0);
+	}
     }
     // go from stanby to sleep
     opmode(OPMODE_SLEEP);
@@ -836,24 +946,24 @@ void os_radio (u1_t mode) {
     hal_disableIRQs();
     switch (mode) {
       case RADIO_RST:
-        // put radio to sleep
-        opmode(OPMODE_SLEEP);
-        break;
+	// put radio to sleep
+	opmode(OPMODE_SLEEP);
+	break;
 
       case RADIO_TX:
-        // transmit frame now
-        starttx(); // buf=LMIC.frame, len=LMIC.dataLen
-        break;
+	// transmit frame now
+	starttx(); // buf=LMIC.frame, len=LMIC.dataLen
+	break;
 
       case RADIO_RX:
-        // receive frame now (exactly at rxtime)
-        startrx(RXMODE_SINGLE); // buf=LMIC.frame, time=LMIC.rxtime, timeout=LMIC.rxsyms
-        break;
+	// receive frame now (exactly at rxtime)
+	startrx(RXMODE_SINGLE); // buf=LMIC.frame, time=LMIC.rxtime, timeout=LMIC.rxsyms
+	break;
 
       case RADIO_RXON:
-        // start scanning for beacon now
-        startrx(RXMODE_SCAN); // buf=LMIC.frame
-        break;
+	// start scanning for beacon now
+	startrx(RXMODE_SCAN); // buf=LMIC.frame
+	break;
     }
     hal_enableIRQs();
 }

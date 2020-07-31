@@ -699,7 +699,8 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
         i2c_master_read(cmd, (uint8_t *) data, len - 1, ACK_VAL);
         i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
     } else {
-        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), ACK_VAL);
+      //i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), ACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
     }
 
     i2c_unlock(unit);

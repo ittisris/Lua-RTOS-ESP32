@@ -337,6 +337,99 @@ static int getCharPtr(uint8_t c) {
  *
  */
 
+#if (CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32 || CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA)
+static void printChar(uint8_t c, int x, int y, int color, int fill) {
+	uint8_t i, j, ch, fz, mask;
+	uint16_t k, temp, cx, cy;
+
+#if 1
+	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
+#endif
+
+	gdisplay_begin();
+
+	if (cfont.bitmap == 3) {
+		temp = (c - cfont.offset) * cfont.x_size;
+
+		if (!gdisplay_get_transparency()) {
+			gdisplay_rect_fill(x, y, cfont.x_size, cfont.y_size, fill, fill);
+		}
+
+		for (i = 0; i < cfont.x_size; i++) {
+			ch = cfont.font[temp + i];
+			mask = 0x01;
+			cx = (uint16_t) (x + i);
+			
+#if 1
+			uint8_t u;
+			u = 0;
+
+			if ( (gdisplay_get_wrap() == 0) && (cx > (caps->width - 1)) ) {
+					u = 1;
+					gdisplay_scroll_left();
+					if (!gdisplay_get_transparency())
+						gdisplay_rect_fill(caps->width - 1, 0, 1, caps->height, fill, fill);
+			}
+#endif
+
+			for (j = 0; j < cfont.y_size; j++) {
+					cy = (uint16_t) (y + j);
+					if (ch & mask) {
+
+#if 1
+						if(u)
+							gdisplay_set_pixel(caps->width - 1, cy, color);
+						else
+							gdisplay_set_pixel(cx, cy, color);
+#else
+						gdisplay_set_pixel(cx, cy, color);
+#endif						
+					}
+				mask = mask << 1;
+			}
+
+#if 1
+			if (u) {
+				gdisplay_update();
+				delay(30);
+			}
+#endif
+
+		}
+	} else {
+		// fz = bytes per char row
+		fz = cfont.x_size / 8;
+		if (cfont.x_size % 8)
+			fz++;
+
+		// get char address
+		temp = ((c - cfont.offset) * ((fz) * cfont.y_size)) + 4;
+
+		// fill background if not transparent background
+		if (!gdisplay_get_transparency()) {
+			gdisplay_rect_fill(x, y, cfont.x_size, cfont.y_size, fill, fill);
+		}
+
+		for (j = 0; j < cfont.y_size; j++) {
+			for (k = 0; k < fz; k++) {
+				ch = cfont.font[temp + k];
+				mask = 0x80;
+				for (i = 0; i < 8; i++) {
+					if ((ch & mask) != 0) {
+						cx = (uint16_t) (x + i + (k * 8));
+						cy = (uint16_t) (y + j);
+						gdisplay_set_pixel(cx, cy, color);
+					}
+					mask >>= 1;
+				}
+			}
+			temp += (fz);
+		}
+	}
+
+	gdisplay_end();
+}
+#else
 static void printChar(uint8_t c, int x, int y, int color, int fill) {
 	uint8_t i, j, ch, fz, mask;
 	uint16_t k, temp, cx, cy;
@@ -396,6 +489,7 @@ static void printChar(uint8_t c, int x, int y, int color, int fill) {
 
 	gdisplay_end();
 }
+#endif
 
 static void rotateChar(uint8_t c, int x, int y, int pos, int color, int fill) {
 	uint8_t i, j, ch, fz, mask;
@@ -482,7 +576,7 @@ driver_error_t *gdisplay_set_font(uint8_t font, const char *file) {
 	} else if (font == LCD_FONT) {
 		cfont.bitmap = 3;
 		cfont.x_size = 5;
-		cfont.y_size = 8;
+		cfont.y_size = 5;	//8 m5stack atom
 		cfont.offset = 32;
 		cfont.font = (uint8_t *)lcd_5;
 		cfont.numchars = 96;
@@ -529,6 +623,162 @@ driver_error_t *gdisplay_get_font_height(int *height) {
 	return NULL;
 }
 
+#if (CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32 || CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA)
+driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
+	int stl, i, tmpw, tmph, fh;
+	uint8_t ch;
+
+	// Sanity checks
+	if (!gdisplay_is_init()) {
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+	}
+
+	if (cfont.bitmap == 0) {
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_FONT, NULL);
+	}
+
+	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
+
+	// for rotated string x cannot be RIGHT or CENTER
+	if ((gdisplay_get_rotation() != 0) && ((x < -2) || (y < -2)))
+		return NULL;
+
+	stl = strlen(st); // number of characters in string to print
+
+	// set CENTER or RIGHT possition
+	tmpw = getStringWidth(st);
+	fh = cfont.y_size; // font height
+	if ((cfont.x_size != 0) && (cfont.bitmap == 2)) {
+		// 7-segment font
+		fh = (3 * (2 * cfont.y_size + 1)) + (2 * cfont.x_size); // character height
+	}
+
+	if (x == RIGHT)
+		x = caps->width - tmpw - 2;
+	if (x == CENTER)
+		x = (caps->width - tmpw - 2) / 2;
+	if (y == BOTTOM)
+		y = caps->height - fh - 2;
+	if (y == CENTER)
+		y = (caps->height - (fh / 2) - 2) / 2;
+
+	int cursorx = x;
+	int cursory = y;
+
+	int offset = gdisplay_get_offset();
+
+	tmph = cfont.y_size; // font height
+	// for non-proportional fonts, char width is the same for all chars
+	if (cfont.x_size != 0) {
+		if (cfont.bitmap == 2) { // 7-segment font
+			tmpw = (2 * (2 * cfont.y_size + 1)) + cfont.x_size; // character width
+			tmph = (3 * (2 * cfont.y_size + 1)) + (2 * cfont.x_size); // character height
+		} else
+			tmpw = cfont.x_size;
+
+		if (cfont.bitmap == 3) {
+			tmpw++;
+			tmph++;
+		}
+	}
+
+	gdisplay_begin();
+
+	// adjust y position
+	for (i = 0; i < stl; i++) {
+		ch = *st++; // get char
+
+		if (cfont.x_size == 0) {
+			// for proportional font get char width
+			if (getCharPtr(ch))
+				tmpw = fontChar.xDelta;
+		}
+
+		if (ch == 0x0D) { // === '\r', erase to eol ====
+			if ((!gdisplay_get_transparency()) && (gdisplay_get_rotation() == 0))
+			gdisplay_rect_fill(cursorx, cursory, caps->width - cursorx, tmph, fill, fill);
+		}
+
+		else if (ch == 0x0A) { // ==== '\n', new line ====
+			if (cfont.bitmap == 1) {
+				cursory += tmph;
+				if (cursory > (caps->width - 1 - tmph))
+					break;
+
+				cursorx = 0;
+			}
+		} else { // ==== other characters ====
+			// check if character can be displayed in the current line
+#if 1
+ #if 0
+			if ((cursorx + tmpw) > (caps->width)) {
+				if (gdisplay_get_wrap() == 0)
+					;
+				else
+					break;
+			}
+ #endif
+#else
+ #if 0	//m5stack atom
+			if ((cursorx + tmpw) > (caps->width)) {
+				if (gdisplay_get_wrap() == 0)
+					break;
+				cursory += tmph;
+				if (cursory > (caps->height - tmph - 1))
+					break;
+				cursorx = 0;
+			}
+ #endif
+#endif		
+			// Let's print the character
+			if (cfont.x_size == 0) {
+				// == proportional font
+				if (gdisplay_get_rotation() == 0) {
+					cursorx += printProportionalChar(cursorx, cursory, color, fill) + 1;
+				} else {
+					offset += rotatePropChar(x, y, offset, color, fill);
+					gdisplay_set_offset(offset);
+				}
+			}
+			// == fixed font
+			else {
+				if ((cfont.bitmap == 1) || (cfont.bitmap == 3)) {
+					if ((ch < cfont.offset)
+							|| ((ch - cfont.offset) > cfont.numchars))
+						ch = cfont.offset;
+					if (gdisplay_get_rotation() == 0) {
+						printChar(ch, cursorx, cursory, color, fill);
+						cursorx += tmpw;
+
+#if 1
+				if ((gdisplay_get_wrap() == 0) && (cursorx > (caps->width - 1))) {
+					int8_t sc;
+					sc = tmpw - cfont.x_size;
+					while (sc > 0) {
+						gdisplay_scroll_left();
+						gdisplay_update();
+						delay(30);
+						sc--;
+					}
+				}
+#endif
+					} else
+						rotateChar(ch, x, y, i, color, fill);
+				} else if (cfont.bitmap == 2) { // 7-seg font
+					gdisplay_draw7seg(cursorx, cursory, ch, cfont.y_size, cfont.x_size, color, fill, cfont.offset);
+					cursorx += (tmpw + 2);
+				}
+			}
+		}
+	}
+
+	gdisplay_end();
+
+	gdisplay_set_cursor(cursorx, cursory);
+
+	return NULL;
+}
+#else
 driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 	int stl, i, tmpw, tmph, fh;
 	uint8_t ch;
@@ -658,6 +908,7 @@ driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 
 	return NULL;
 }
+#endif
 
 driver_error_t *gdisplay_get_font_size(int *w, int *h) {
 	if (cfont.bitmap == 1) {
