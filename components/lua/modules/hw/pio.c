@@ -35,6 +35,10 @@
 #define PIO_PORT_OP         0
 #define PIO_PIN_OP          1
 
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+#include <drivers/kidbright32.h>
+#endif
+
 typedef struct {
     uint8_t pin;
     uint8_t type;
@@ -608,6 +612,27 @@ static const LUA_REG_TYPE pio_map[] = {
     PIO_GPIO77
     PIO_GPIO78
     PIO_GPIO79
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+    {LSTRKEY( "BT_LED"), LINTVAL( BT_LED_GPIO )},
+    {LSTRKEY( "WIFI_LED"), LINTVAL( WIFI_LED_GPIO )},
+    {LSTRKEY( "NTP_LED"), LINTVAL( NTP_LED_GPIO )},
+    {LSTRKEY( "IOT_LED"), LINTVAL( IOT_LED_GPIO )},
+
+    {LSTRKEY( "IN1"), LINTVAL( GPIO32 )},
+    {LSTRKEY( "IN2"), LINTVAL( GPIO33 )},
+    {LSTRKEY( "IN3"), LINTVAL( GPIO34 )},
+    {LSTRKEY( "IN4"), LINTVAL( GPIO35 )},
+
+    {LSTRKEY( "OUT1"), LINTVAL( GPIO26 )},
+    {LSTRKEY( "OUT2"), LINTVAL( GPIO27 )},
+    {LSTRKEY( "USBSW"), LINTVAL( GPIO25 )},
+    {LSTRKEY( "SPRK"), LINTVAL( GPIO13 )},
+
+    {LSTRKEY( "SW1"), LINTVAL( GPIO16 )},
+    {LSTRKEY( "SW2"), LINTVAL( GPIO14 )},
+    {LSTRKEY( "LDR"), LINTVAL( GPIO36 )},
+#endif
 
     { LNILKEY, LNILVAL }
 };

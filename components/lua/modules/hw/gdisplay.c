@@ -1331,7 +1331,8 @@ static int lgdisplay_init( lua_State* L ) {
 	if (
 			(display->chipset == CHIPSET_SSD1306_128_32) ||
 			(display->chipset == CHIPSET_SSD1306_128_64) ||
-			(display->chipset == CHIPSET_SSD1306_96_16)
+			(display->chipset == CHIPSET_SSD1306_96_16)  ||
+			(display->chipset == CHIPSET_HT16K33_16_8)
 	) {
 		if (lua_gettop(L) == 4) {
 			address = luaL_checkinteger(L, 4);
@@ -1475,6 +1476,8 @@ static const LUA_REG_TYPE gdisplay_map[] = {
 	{ LSTRKEY( "MODE_ALPHANUM" ),  LINTVAL( qrcodegen_Mode_ALPHANUMERIC ) },
 	{ LSTRKEY( "MODE_BYTE" ),      LINTVAL( qrcodegen_Mode_BYTE ) },
 	{ LSTRKEY( "MODE_ECI" ),       LINTVAL( qrcodegen_Mode_ECI ) },
+
+	{ LSTRKEY( "HT16K33_16_8" ),   LINTVAL( CHIPSET_HT16K33_16_8   ) },
 
 	DRIVER_REGISTER_LUA_ERRORS(gdisplay)
 

@@ -1,0 +1,5 @@
+gdisplay.attach(gdisplay.SSD1306_128_64, gdisplay.LANDSCAPE, true, 0x3c)
+gdisplay.clear()
+gdisplay.setfont(gdisplay.FONT_DEFAULT)
+gdisplay.write({gdisplay.CENTER,gdisplay.CENTER},"Lua-RTOS-ESP32")
+gdisplay.on()

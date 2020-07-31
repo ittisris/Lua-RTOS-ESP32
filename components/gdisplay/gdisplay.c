@@ -91,6 +91,9 @@ static const gdisplay_t displaydevs[] = {
 	{CHIPSET_SSD1306_128_32, ssd1306_init},
 	{CHIPSET_SSD1306_128_64, ssd1306_init},
 	{CHIPSET_SSD1306_96_16,  ssd1306_init},
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+	{CHIPSET_HT16K33_16_8,   ht16k33_init},
+#endif
 	{NULL}
 };
 
@@ -133,7 +136,12 @@ DRIVER_REGISTER_END(GDISPLAY,gdisplay,0,NULL,NULL);
 /*
  * Helper functions
  */
-static void gdisplay_update() {
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+#else
+static 
+#endif
+
+void gdisplay_update() {
 	if (buffer) {
 		gdisplay_ll_update(bbx1, bby1, bbx2, bby2, (uint8_t *)buffer);
 	} else {
@@ -205,6 +213,25 @@ driver_error_t *gdisplay_get_pixel(int x, int y, uint32_t *color) {
 
 	return NULL;
 }
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+driver_error_t *gdisplay_scroll_left() {
+	uint8_t x,y;
+	uint32_t color;
+	for (x = dispWin.x1; x < dispWin.x2; x++) {
+		for (y = dispWin.y1; y <= dispWin.y2; y++) {
+			color = gdisplay_get_bitmap_pixel(x+1, y, buffer?buffer:NULL, -1, -1);
+			gdisplay_set_bitmap_pixel(x, y, color, buffer?buffer:NULL, -1, -1);
+		}
+	}
+	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
+	for (y = dispWin.y1; y <= dispWin.y2; y++) {
+			gdisplay_set_bitmap_pixel(dispWin.x2, y, 1-caps->monochrome_white, buffer?buffer:NULL, -1, -1);
+	}
+
+	return NULL;
+}
+#endif
 
 const gdisplay_t *gdisplay_get(uint8_t chipset) {
 	const gdisplay_t *cdisplay;

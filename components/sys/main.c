@@ -63,6 +63,10 @@
 
 #include <pthread.h>
 
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+#include <drivers/kidbright32.h>
+#endif
+
 void luaos_main();
 void _sys_init();
 
@@ -89,6 +93,30 @@ void app_main() {
 	gpio_pin_clr(CONFIG_LUA_RTOS_LED_ACT);
 	#endif
 
+	#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+	driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, WIFI_LED_GPIO, DRIVER_ALL_FLAGS, "WIFI LED");
+	//driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, BT_LED_GPIO, DRIVER_ALL_FLAGS, "BT LED");
+	//driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, BT_LED_GPIO, DRIVER_ALL_FLAGS, "NTP_LED_GPIO");
+	//driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, BT_LED_GPIO, DRIVER_ALL_FLAGS, "IOT_LED_GPIO");
+
+	gpio_pin_output(WIFI_LED_GPIO);
+	gpio_pin_output(BT_LED_GPIO);
+	gpio_pin_output(NTP_LED_GPIO);
+	gpio_pin_output(IOT_LED_GPIO);
+
+	# if (LED_OFF == 1)
+		gpio_pin_set(WIFI_LED_GPIO);
+		gpio_pin_set(BT_LED_GPIO);
+		gpio_pin_set(NTP_LED_GPIO);
+		gpio_pin_set(IOT_LED_GPIO);
+	# else
+		gpio_pin_clr(WIFI_LED_GPIO);
+		gpio_pin_clr(BT_LED_GPIO);
+		gpio_pin_clr(NTP_LED_GPIO);
+		gpio_pin_clr(IOT_LED_GPIO);
+	# endif
+	#endif
+	
 	// Create and run a pthread for the Lua interpreter
 	pthread_attr_t attr;
 	struct sched_param sched;

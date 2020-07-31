@@ -432,6 +432,18 @@
         "image": "https://www.m5stack.com/assets/images/p_core.png"
     },
     {
+        "id": "M5STICKC",
+        "description": "M5StickC Code Board",
+        "manufacturer": "M5Stack",
+        "brand": "",
+        "type": "GENERIC",
+        "subtype": "",
+        "filesystem": "m5stickc",
+        "usb_vid_pid": "0403:6001",
+        "usb_port_exp": "",
+        "image": "https://www.m5stack.com/assets/images/p_core.png"
+    },
+    {
         "id": "GENERIC",
         "description": "Generic ESP32 board",
         "manufacturer": "Generic",
@@ -454,5 +466,17 @@
         "usb_vid_pid": "",
         "usb_port_exp": "",
         "image": ""
+    },
+    {
+        "id": "KIDBRIGHT32",
+        "description": "KIDBRIGHT32",
+        "manufacturer": "NECTEC/Gravitech",
+        "brand": "",
+        "type": "KIDBRIGHT32",
+        "subtype": "",
+        "filesystem": "kb",
+        "usb_vid_pid": "0403:6015",
+        "usb_port_exp": "",
+        "image": "https://www.kid-bright.org/en/wp-content/uploads/sites/4/2020/01/kidbright.jpg"
     }
 ]

@@ -83,6 +83,7 @@ typedef struct {
 	uint16_t phys_height;
 	gdisplay_interface_t interface;
 	uint8_t address;
+	uint8_t chipset;	//Add HT16k33_16x8
 } gdisplay_caps_t;
 
 /**

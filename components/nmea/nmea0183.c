@@ -51,12 +51,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 #include <math.h>
 #include <sys/syslog.h>
 
 static char *GPGGA = "GPGGA";  // GPGGA sentence string
-//static char *GPRMC = "GPRMC";  // GPRMC sentence string
-//static int  date_updated = 0;  // 0 = date is not updated yet, 1 = updated
+static char *GPRMC = "RMC";  // "GPRMC" sentence string
+static int  date_updated = 0;  // 0 = date is not updated yet, 1 = updated
 
 // Last position data
 static double lat, lon;
@@ -226,7 +227,7 @@ static void nmea_GPGGA(char *sentence) {
     }
 }
 
-#if 0
+#if 1
 // Recommended minimum specific GPS/Transit data
 // $GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62
 //
@@ -317,7 +318,7 @@ static void nmea_GPRMC(char *sentence) {
             time_t newtime;
             struct tm tms;
 
-            memset(&tms, 0, sizeof(struct tm));
+            memset(&tms, 0, sizeof(tms));
 
             tms.tm_hour = hours;
             tms.tm_min = minutes;
@@ -345,13 +346,15 @@ void nmea_parse(char *sentence) {
 
             // Skip $
             if (*token == '$') {
-                token++;
+                token++;    //skip $
+                token++;    //skip G
+                token++;    //skip P
             }
 
-            if (strncmp(GPGGA, token, 5) == 0) {
+            if (strncmp(GPGGA, token, 3) == 0) {
                 nmea_GPGGA(c);
-            //} else if ((strncmp(GPRMC, token, 5) == 0) && (!date_updated)) {
-            //    nmea_GPRMC(c);
+            } else if ((strncmp(GPRMC, token, 3) == 0) && (!date_updated)) {
+                nmea_GPRMC(c);
             } else {
                 break;
             }

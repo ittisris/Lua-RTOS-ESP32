@@ -62,7 +62,8 @@
 // Display capabilities
 static gdisplay_caps_t caps = {
 	0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0	//Add HT16k33_16x8
 };
 
 /*
@@ -191,13 +192,25 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 				if (caps.interface == GDisplaySPIInterface) {
 					spi_ll_bulk_write(caps.device, buff_size, (uint8_t *)buff);
 				} else{
-					ssd1306_update(x0, y0, x1, y1, buff);
+					if (caps.chipset == CHIPSET_HT16K33_16_8) {
+						#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+						ht16k33_update(x0, y0, x1, y1, buff);
+						#endif
+					} else {
+						ssd1306_update(x0, y0, x1, y1, buff);
+					}
 				}
 			} else {
 				if (caps.interface == GDisplaySPIInterface) {
 					spi_ll_bulk_write16(caps.device, buff_pixels, (uint16_t *)buff);
 				} else {
-					ssd1306_update(x0, y0, x1, y1, buff);
+					if (caps.chipset == CHIPSET_HT16K33_16_8) {
+						#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+						ht16k33_update(x0, y0, x1, y1, buff);
+						#endif
+					} else {
+						ssd1306_update(x0, y0, x1, y1, buff);
+					}
 				}
 			}
 
@@ -220,7 +233,13 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 			if (caps.interface == GDisplaySPIInterface) {
 				spi_ll_bulk_write(caps.device, buff_size, (uint8_t *)buff);
 			} else {
-				ssd1306_update(x0, y0, x1, y1, buff);
+				if (caps.chipset == CHIPSET_HT16K33_16_8) {
+						#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+						ht16k33_update(x0, y0, x1, y1, buff);
+						#endif
+				} else {
+						ssd1306_update(x0, y0, x1, y1, buff);
+				}
 			}
 		} else {
 			uint16_t *origin = (uint16_t *)buffer;
@@ -234,7 +253,13 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 						if (caps.interface == GDisplaySPIInterface) {
 							spi_ll_bulk_write16(caps.device, len, (uint16_t *)buff);
 						} else {
-							ssd1306_update(x0, y0, x1, y1, buff);
+							if (caps.chipset == CHIPSET_HT16K33_16_8) {
+								#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+								ht16k33_update(x0, y0, x1, y1, buff);
+								#endif
+							} else {
+								ssd1306_update(x0, y0, x1, y1, buff);
+							}
 						}
 
 						len = 0;
@@ -250,7 +275,13 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 				if (caps.interface == GDisplaySPIInterface) {
 					spi_ll_bulk_write16(caps.device, len, (uint16_t *)buff);
 				} else{
-					ssd1306_update(x0, y0, x1, y1, buff);
+					if (caps.chipset == CHIPSET_HT16K33_16_8) {
+						#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+						ht16k33_update(x0, y0, x1, y1, buff);
+						#endif
+					} else {
+						ssd1306_update(x0, y0, x1, y1, buff);
+					}
 				}
 
 				len = 0;
@@ -382,6 +413,41 @@ uint32_t gdisplay_ll_get_pixel(int x, int y, uint8_t *buffer, int buffw, int buf
 		return 0;
 	} else {
 
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+		if (caps.bytes_per_pixel == 0) {
+			// Rotate x,y according to current orientation
+			// In pcd8544 this only can be done by software
+			if (caps.orient == LANDSCAPE_FLIP) {
+				x = (buffw!=-1?buffw:caps.phys_width) - 1 - x;
+				y = (buffh!=-1?buffh:caps.phys_height) - 1 - y;
+			} else if (caps.orient == PORTRAIT) {
+				x = (buffh!=-1?buffh:caps.phys_height) - 1 - x;
+				swap(x,y);
+			} else if (caps.orient == PORTRAIT_FLIP) {
+				y = (buffw!=-1?buffw:caps.phys_width) - 1 - y;
+				swap(x,y);
+			}
+
+			if ((buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] & (1 << (y % 8))) == 0)
+				color = 1-caps.monochrome_white;
+			else
+				color = caps.monochrome_white;
+		}
+		else {
+			color = ((uint16_t *)buffer)[y * (buffw!=-1?buffw:caps.width) + x];
+			// Take care about endianness
+			if (BYTE_ORDER == LITTLE_ENDIAN) {
+				uint32_t wd;
+				wd = (uint32_t)(color >> 8);
+				wd |= (uint32_t)(color & 0xff) << 8;
+				color = wd;
+			}
+		}
+	return color;
+	}
+
+#else
+
 		color = ((uint16_t *)buffer)[y * (buffw!=-1?buffw:caps.width) + x];
 
 		// Take care about endianness
@@ -394,6 +460,7 @@ uint32_t gdisplay_ll_get_pixel(int x, int y, uint8_t *buffer, int buffw, int buf
 	}
 
 	return color;
+#endif
 }
 
 void gdisplay_ll_set_bitmap(int x, int y, uint8_t *buffer, uint8_t *buff, int buffw, int buffh) {

@@ -173,5 +173,15 @@
 		"id": "GENERIC-OTA",
 		"type": "GENERIC",
 		"subtype": "OTA"
+	},
+	{
+		"id": "KIDBRIGHT",
+		"type": "GENERIC",
+		"subtype": ""
+	},
+	{
+		"id": "M5STICKC",
+		"type": "GENERIC",
+		"subtype": ""
 	}
 ]

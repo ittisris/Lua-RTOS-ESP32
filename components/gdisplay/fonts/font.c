@@ -331,7 +331,6 @@ static int getCharPtr(uint8_t c) {
   else return 0;
 }
 
-
 /*
  * Fixed font
  *
@@ -340,6 +339,10 @@ static int getCharPtr(uint8_t c) {
 static void printChar(uint8_t c, int x, int y, int color, int fill) {
 	uint8_t i, j, ch, fz, mask;
 	uint16_t k, temp, cx, cy;
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
+#endif
 
 	gdisplay_begin();
 
@@ -353,14 +356,43 @@ static void printChar(uint8_t c, int x, int y, int color, int fill) {
 		for (i = 0; i < cfont.x_size; i++) {
 			ch = cfont.font[temp + i];
 			mask = 0x01;
+			cx = (uint16_t) (x + i);
+			
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+			uint8_t u;
+			u = 0;
+
+			if ( (gdisplay_get_wrap() == 0) && (cx > (caps->width - 1)) ) {
+					u = 1;
+					gdisplay_scroll_left();
+					if (!gdisplay_get_transparency())
+						gdisplay_rect_fill(caps->width - 1, 0, 1, caps->height, fill, fill);
+			}
+#endif
+
 			for (j = 0; j < cfont.y_size; j++) {
-				if (ch & mask) {
-					cx = (uint16_t) (x + i);
 					cy = (uint16_t) (y + j);
-					gdisplay_set_pixel(cx, cy, color);
-				}
+					if (ch & mask) {
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+						if(u)
+							gdisplay_set_pixel(caps->width - 1, cy, color);
+						else
+							gdisplay_set_pixel(cx, cy, color);
+#else
+						gdisplay_set_pixel(cx, cy, color);
+#endif						
+					}
 				mask = mask << 1;
 			}
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+			if (u) {
+				gdisplay_update();
+				delay(30);
+			}
+#endif
+
 		}
 	} else {
 		// fz = bytes per char row
@@ -614,6 +646,16 @@ driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 			}
 		} else { // ==== other characters ====
 			// check if character can be displayed in the current line
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+ #if 0
+			if ((cursorx + tmpw) > (caps->width)) {
+				if (gdisplay_get_wrap() == 0)
+					;
+				else
+					break;
+			}
+ #endif
+#else
 			if ((cursorx + tmpw) > (caps->width)) {
 				if (gdisplay_get_wrap() == 0)
 					break;
@@ -622,7 +664,7 @@ driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 					break;
 				cursorx = 0;
 			}
-
+#endif		
 			// Let's print the character
 			if (cfont.x_size == 0) {
 				// == proportional font
@@ -642,6 +684,19 @@ driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 					if (gdisplay_get_rotation() == 0) {
 						printChar(ch, cursorx, cursory, color, fill);
 						cursorx += tmpw;
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+				if ((gdisplay_get_wrap() == 0) && (cursorx > (caps->width - 1))) {
+					int8_t sc;
+					sc = tmpw - cfont.x_size;
+					while (sc > 0) {
+						gdisplay_scroll_left();
+						gdisplay_update();
+						delay(30);
+						sc--;
+					}
+				}
+#endif
 					} else
 						rotateChar(ch, x, y, i, color, fill);
 				} else if (cfont.bitmap == 2) { // 7-seg font

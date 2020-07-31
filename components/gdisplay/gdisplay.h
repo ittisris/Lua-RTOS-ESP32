@@ -63,6 +63,10 @@
 #include <drivers/pcd8544.h>
 #include <drivers/ssd1306.h>
 
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+#include <drivers/ht16k33_16x8.h>	//HT16k33_16x8 graphic display mode
+#endif
+
 /*
  * ST7735
  */
@@ -106,6 +110,10 @@
 #define CHIPSET_SSD1306_96_16   10
 
 #define CHIPSET_SSD1306_VARIANT_OFFSET CHIPSET_SSD1306_128_32
+/*
+ * HT16k33 graphic display mode
+ */
+#define CHIPSET_HT16K33_16_8   11	//Add HT16k33_16x8
 
 // Color definitions
 #define GDISPLAY_BLACK       0x0000      /*   0,   0,   0 */
@@ -220,6 +228,10 @@ driver_error_t *gdisplay_type(int8_t *dtype);
 driver_error_t *gdisplay_set_rotation(uint16_t newrot);
 driver_error_t *gdisplay_set_orientation(uint16_t orient);
 
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+driver_error_t *gdisplay_scroll_left();
+#endif
+
 uint8_t gdisplay_is_init();
 void gdisplay_begin();
 void gdisplay_end();
@@ -252,5 +264,9 @@ driver_error_t *gdisplay_lock();
 driver_error_t *gdisplay_unlock();
 
 const gdisplay_t *gdisplay_get(uint8_t chipset);
+
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+void gdisplay_update();
+#endif
 
 #endif	/* GDISPLAY_H */

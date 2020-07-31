@@ -124,11 +124,17 @@ menu "Lua RTOS"
       config LUA_RTOS_FIRMWARE_M5STACK_OTA
          bool "M5Stack Core Board with OTA"
 
+      config LUA_RTOS_FIRMWARE_M5STICKC
+         bool "M5StickC Code Board"
+
       config LUA_RTOS_FIRMWARE_GENERIC
          bool "Generic ESP32 board"
 
       config LUA_RTOS_FIRMWARE_GENERIC_OTA
          bool "Generic ESP32 board with OTA"
+
+      config LUA_RTOS_FIRMWARE_KIDBRIGHT32
+         bool "KIDBRIGHT32"
 
    endchoice
 
@@ -1464,6 +1470,10 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_VH400
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "VH400"
+               default y
+            config LUA_RTOS_USE_SENSOR_LM73
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "LM73"
                default y
          endmenu
       endmenu
