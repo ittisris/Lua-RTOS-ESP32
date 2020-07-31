@@ -51,12 +51,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <math.h>
+#include <time.h>
+
 #include <sys/syslog.h>
 
-static char *GPGGA = "GPGGA";  // GPGGA sentence string
-//static char *GPRMC = "GPRMC";  // GPRMC sentence string
-//static int  date_updated = 0;  // 0 = date is not updated yet, 1 = updated
+static char *GPGGA = "GGA";  // "GPGGA" sentence string
+static char *GPRMC = "RMC";  // "GPRMC" sentence string
+static int  date_updated = 0;  // 0 = date is not updated yet, 1 = updated
 
 // Last position data
 static double lat, lon;
@@ -80,11 +81,11 @@ static int nmea_initial_checksum(char *c) {
 
 // Converts a geolocation expressed in � ' '' to decimal
 double nmea_geoloc_to_decimal(char *token) {
-    double val 	   = 0.0;
+    double val     = 0.0;
     double degrees = 0.0;
     double minutes = 0.0;
     double seconds = 0.0;
-    int num_decimals = 0;
+
     char *current = token;
 
     while (*current) {
@@ -111,7 +112,7 @@ double nmea_geoloc_to_decimal(char *token) {
             // Get second value
             current++;
             *current = '0';  // Put 0 for convert seconds from ascci to double
-            current++;	     // Put . for convert seconds from ascci to double
+            current++;       // Put . for convert seconds from ascci to double
             *current = '.';
             current--;
 
@@ -119,9 +120,7 @@ double nmea_geoloc_to_decimal(char *token) {
 
             current++;
             current++;
-            num_decimals = strlen(current);
-
-            seconds = (double)atoi(current) / (double)pow((double)10, (double)num_decimals);
+            seconds = (double)atoi(current) / (double)1000000;
 
             // Do the conversion
             val = degrees + ((minutes + seconds) / 60);
@@ -193,13 +192,13 @@ static void nmea_GPGGA(char *sentence) {
                 }
             }
 
-            if (seq == 5) {	// GPS quality indicator (0=invalid; 1=GPS fix; 2=Diff. GPS fix)
+            if (seq == 5) { // GPS quality indicator (0=invalid; 1=GPS fix; 2=Diff. GPS fix)
                 int quality = atoi(token);
 
                 valid = ((quality == 1) || (quality == 2));
             }
 
-            if (seq == 6) {	// Number of satellites in use [not those in view]
+            if (seq == 6) { // Number of satellites in use [not those in view]
                 sats = atoi(token);
             }
 
@@ -226,7 +225,6 @@ static void nmea_GPGGA(char *sentence) {
     }
 }
 
-#if 0
 // Recommended minimum specific GPS/Transit data
 // $GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62
 //
@@ -261,7 +259,7 @@ static void nmea_GPRMC(char *sentence) {
 
             *c++ = 0;
 
-            if (seq == 0) {	// UTC of position fix
+            if (seq == 0) { // UTC of position fix
                 tmp[0] = *(token + 0);
                 tmp[1] = *(token + 1);
                 tmp[2] = 0;
@@ -278,7 +276,7 @@ static void nmea_GPRMC(char *sentence) {
                 seconds = atoi(tmp);
             }
 
-            if (seq == 8) {	// UT date
+            if (seq == 8) { // UT date
                 tmp[0] = *(token + 0);
                 tmp[1] = *(token + 1);
                 tmp[2] = 0;
@@ -317,7 +315,7 @@ static void nmea_GPRMC(char *sentence) {
             time_t newtime;
             struct tm tms;
 
-            memset(&tms, 0, sizeof(struct tm));
+            memset(&tms, 0, sizeof(tms));
 
             tms.tm_hour = hours;
             tms.tm_min = minutes;
@@ -332,7 +330,6 @@ static void nmea_GPRMC(char *sentence) {
         }
     }
 }
-#endif
 
 void nmea_parse(char *sentence) {
     char *c;
@@ -345,13 +342,15 @@ void nmea_parse(char *sentence) {
 
             // Skip $
             if (*token == '$') {
-                token++;
+                token++;    //skip $
+                token++;    //skip G
+                token++;    //skip P
             }
 
-            if (strncmp(GPGGA, token, 5) == 0) {
+            if (strncmp(GPGGA, token, 3) == 0) {
                 nmea_GPGGA(c);
-            //} else if ((strncmp(GPRMC, token, 5) == 0) && (!date_updated)) {
-            //    nmea_GPRMC(c);
+            } else if ((strncmp(GPRMC, token, 3) == 0) && (!date_updated)) {
+                nmea_GPRMC(c);
             } else {
                 break;
             }

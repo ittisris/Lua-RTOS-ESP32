@@ -91,6 +91,12 @@ static const gdisplay_t displaydevs[] = {
 	{CHIPSET_SSD1306_128_32, ssd1306_init},
 	{CHIPSET_SSD1306_128_64, ssd1306_init},
 	{CHIPSET_SSD1306_96_16,  ssd1306_init},
+#if CONFIG_LUA_RTOS_FIRMWARE_KIDBRIGHT32
+	{CHIPSET_HT16K33_16_8,   ht16k33_init},
+#endif
+#if(CONFIG_LUA_RTOS_FIRMWARE_M5STACK || CONFIG_LUA_RTOS_FIRMWARE_M5STACK_OTA) // m5 atom
+	{CHIPSET_NEOPIXEL_5x5,	neopixel5x5_init},
+#endif
 	{NULL}
 };
 

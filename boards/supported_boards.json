@@ -351,6 +351,39 @@
         ]
     },
     {
+        "description": "M5StickC core board",
+        "manufacturer": "M5Stack",
+        "image": "https://www.m5stack.com/assets/images/p_core.png",
+        "usb_vid_pid": "0403:6001",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "M5STICKC",
+                "description": "M5StickC Core Board",
+                "filesystem": "default"
+            },
+            {
+                "id": "ATOM",
+                "description": "Atom Matrix",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Thailand’s ESP-32-based EduBoard",
+        "manufacturer": "NECTEC/Gravitech",
+        "image": "",
+        "usb_vid_pid": "0403:6015",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "KIDBRIGHT32",
+                "description": "Thailand’s ESP-32-based EduBoard",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
         "description": "Generic ESP32 board",
         "manufacturer": "Generic",
         "image": "",

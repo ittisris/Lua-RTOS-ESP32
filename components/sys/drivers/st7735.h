@@ -86,6 +86,7 @@
 #define ST7735_DISPON     0x29
 #define ST7735_CASET      0x2A
 #define ST7735_PASET      0x2B
+#define ST7735_RASET   	  0x2B // PASET //m5stickc
 #define ST7735_RAMWR      0x2C
 #define ST7735_RAMRD      0x2E
 #define ST7735_MADCTL	   0x36

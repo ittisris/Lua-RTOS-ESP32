@@ -432,6 +432,18 @@
         "image": "https://www.m5stack.com/assets/images/p_core.png"
     },
     {
+        "id": "M5STICKC",
+        "description": "M5StickC Core Board",
+        "manufacturer": "M5Stack",
+        "brand": "",
+        "type": "M5STACK",
+        "subtype": "",
+        "filesystem": "default",
+        "usb_vid_pid": "0403:6001",
+        "usb_port_exp": "",
+        "image": "https://www.m5stack.com/assets/images/p_core.png"
+    },
+    {
         "id": "GENERIC",
         "description": "Generic ESP32 board",
         "manufacturer": "Generic",

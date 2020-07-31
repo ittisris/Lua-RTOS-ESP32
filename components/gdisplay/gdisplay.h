@@ -63,6 +63,8 @@
 #include <drivers/pcd8544.h>
 #include <drivers/ssd1306.h>
 
+#include <drivers/neopixel_5x5.h>	//neopixel 5x5 Matrix
+
 /*
  * ST7735
  */
@@ -106,6 +108,14 @@
 #define CHIPSET_SSD1306_96_16   10
 
 #define CHIPSET_SSD1306_VARIANT_OFFSET CHIPSET_SSD1306_128_32
+/*
+ * HT16k33 graphic display mode
+ */
+#define CHIPSET_HT16K33_16_8   11
+/*
+ * Neopixel 5x5
+ */
+#define CHIPSET_NEOPIXEL_5x5   12
 
 // Color definitions
 #define GDISPLAY_BLACK       0x0000      /*   0,   0,   0 */

@@ -124,6 +124,9 @@ menu "Lua RTOS"
       config LUA_RTOS_FIRMWARE_M5STACK_OTA
          bool "M5Stack Core Board with OTA"
 
+      config LUA_RTOS_FIRMWARE_M5STICKC
+         bool "M5StickC Core Board"
+         
       config LUA_RTOS_FIRMWARE_GENERIC
          bool "Generic ESP32 board"
 

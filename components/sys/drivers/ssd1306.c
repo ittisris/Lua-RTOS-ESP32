@@ -139,6 +139,7 @@ driver_error_t *ssd1306_init(uint8_t chip, uint8_t orient, uint8_t address) {
 	}
 
 	// Store chipset
+	caps->chipset = chip;
 	chipset = chip;
 
 	// Attach to I2C
